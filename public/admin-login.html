@@ -42,7 +42,7 @@
 const API_BASE = 'https://script.google.com/macros/s/AKfycbzdPOjwlwcZLerYM1KStgofzqswB2l4Mqza37ayUU6OiPnRVfbuzNA-E5CKt2DUZaj7WQ/exec';
 const tok = localStorage.getItem('session_token');
 const role = localStorage.getItem('session_role');
-if (tok && role === 'admin') { window.location.href = '/admin-portal'; }
+if (tok && role === 'admin') { window.location.href = './admin-portal.html'; }
 async function doLogin() {
   const btn = document.getElementById('btn-login');
   const errEl = document.getElementById('login-err');
@@ -66,7 +66,7 @@ async function doLogin() {
       localStorage.setItem('session_token', data.token);
       localStorage.setItem('session_role', 'admin');
       localStorage.setItem('session_username', data.username);
-      window.location.href = '/admin-portal';
+      window.location.href = './admin-portal.html';
     } else {
       showErr(errEl, data.error || 'Invalid credentials.');
     }
