@@ -37,15 +37,15 @@
   <div class="form-error" id="login-err"></div>
   <button class="btn btn-primary" id="btn-login" onclick="doLogin()" style="background:linear-gradient(135deg,#d29922,#e3913a);border-color:transparent;">Sign In to Worker Portal</button>
   <p style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-top:1.5rem;">
-    <a href="/customer-login" style="color:var(--accent-blue);">Customer Login</a> · 
-    <a href="/admin-login" style="color:var(--accent-purple);">Admin Login</a>
+    <a href="./customer-login.html" style="color:var(--accent-blue);">Customer Login</a> · 
+    <a href="./admin-login.html" style="color:var(--accent-purple);">Admin Login</a>
   </p>
 </div>
 <script>
-const API_BASE = 'https://script.google.com/macros/s/AKfycbzdPOjwlwcZLerYM1KStgofzqswB2l4Mqza37ayUU6OiPnRVfbuzNA-E5CKt2DUZaj7WQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdPOjwlwcZLerYM1KStgofzqswB2l4Mqza37ayUU6OiPnRVfbuzNA-E5CKt2DUZaj7WQ/exec';
 const tok = localStorage.getItem('session_token');
 const role = localStorage.getItem('session_role');
-if (tok && role === 'worker') { window.location.href = '/worker-portal'; }
+if (tok && role === 'worker') { window.location.href = './worker-portal.html'; }
 async function doLogin() {
   const btn = document.getElementById('btn-login');
   const errEl = document.getElementById('login-err');
@@ -55,18 +55,19 @@ async function doLogin() {
   if (!user || !pass) { showErr(errEl, 'Please enter username and password.'); return; }
   btn.disabled = true; btn.innerText = 'Signing in…';
   try {
-    const res = await fetch(`${API_BASE}?action=workerLogin`, {
+    const payload = JSON.stringify({ action: 'workerLogin', username: user, password: pass });
+    const res = await fetch(SCRIPT_URL, {
       method: 'POST',
       mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: user, password: pass })
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: payload
     });
     const data = await res.json();
     if (data.success) {
       localStorage.setItem('session_token', data.token);
       localStorage.setItem('session_role', 'worker');
       localStorage.setItem('session_username', data.username);
-      window.location.href = '/worker-portal';
+      window.location.href = './worker-portal.html';
     } else {
       showErr(errEl, data.error || 'Invalid credentials.');
     }
