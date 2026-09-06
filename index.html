@@ -2,18 +2,194 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Gmail Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gmail Hub — Access Portal</title>
   <style>
-    body{font-family:Arial,sans-serif;background:#f0f0f0;padding:2rem;}
-    .card{background:#fff;padding:1.5rem;margin:1rem 0;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);}
-    a{display:block;font-size:1.2rem;margin:.5rem 0;color:#0066cc;text-decoration:none;}
-    a:hover{text-decoration:underline;}
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body {
+      background-color: #0d1117;
+      color: #c9d1d9;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .card {
+      background-color: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 420px;
+      padding: 30px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .header { text-align: center; margin-bottom: 24px; }
+    .header h2 { color: #f0f6fc; font-size: 24px; margin-bottom: 8px; }
+    .header p { font-size: 13px; color: #8b949e; }
+    
+    .tabs { display: flex; gap: 8px; margin-bottom: 24px; background: #0d1117; padding: 4px; border-radius: 8px; }
+    .tab-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      background: transparent;
+      color: #8b949e;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .tab-btn.active { background: #21262d; color: #58a6ff; }
+
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+    input {
+      width: 100%;
+      padding: 10px 14px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus { border-color: #58a6ff; }
+    
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: #8957e5;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: 0.2s;
+    }
+    .btn:hover { background: #9b6ef3; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .msg {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      text-align: center;
+      display: none;
+    }
+    .msg.error { background: rgba(248, 81, 73, 0.1); color: #f85149; border: 1px solid #f85149; display: block; }
+    .msg.success { background: rgba(56, 139, 253, 0.1); color: #58a6ff; border: 1px solid #58a6ff; display: block; }
   </style>
 </head>
 <body>
-  <h1>Gmail Hub</h1>
-  <div class="card"><h2>Admin Portal</h2><a href="admin-login.html" target="_blank">Admin Login</a></div>
-  <div class="card"><h2>Worker Portal</h2><a href="worker-login.html" target="_blank">Worker Login</a></div>
-  <div class="card"><h2>Customer Portal</h2><a href="customer-login.html" target="_blank">Customer Login</a></div>
+
+<div class="card">
+  <div class="header">
+    <h2 id="portal-title">Admin Portal</h2>
+    <p id="portal-desc">Restricted area. Provide admin credentials to proceed.</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchRole('Admin')">Admin</button>
+    <button class="tab-btn" onclick="switchRole('Worker')">Worker</button>
+    <button class="tab-btn" onclick="switchRole('Customer')">Customer</button>
+  </div>
+
+  <form id="auth-form" onsubmit="handleAuth(event)">
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="username" required autocomplete="off" placeholder="Enter username">
+    </div>
+
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" required placeholder="Enter password">
+    </div>
+
+    <div class="form-group" id="extra-field" style="display: none;">
+      <label>Gmail or Phone</label>
+      <input type="text" id="contact" placeholder="Email or Phone">
+    </div>
+
+    <button type="submit" class="btn" id="submit-btn">Access Admin Panel</button>
+    <div class="msg" id="status-msg"></div>
+  </form>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzdPOjwlwcZLerYM1KStgofzqswB2l4Mqza37ayUU6OiPnRVfbuzNA-E5CKt2DUZaj7WQ/exec";
+  let currentRole = 'Admin';
+
+  function switchRole(role) {
+    currentRole = role;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.innerText === role);
+    });
+
+    document.getElementById('portal-title').innerText = role + ' Portal';
+    document.getElementById('portal-desc').innerText = 'Access portal for ' + role;
+    document.getElementById('submit-btn').innerText = 'Access ' + role + ' Panel';
+    document.getElementById('extra-field').style.display = 'none';
+    hideMsg();
+  }
+
+  function showMsg(text, isError) {
+    const el = document.getElementById('status-msg');
+    el.className = 'msg ' + (isError ? 'error' : 'success');
+    el.innerText = text;
+  }
+
+  function hideMsg() {
+    document.getElementById('status-msg').style.display = 'none';
+  }
+
+  async function handleAuth(e) {
+    e.preventDefault();
+    hideMsg();
+
+    const u = document.getElementById('username').value.trim();
+    const p = document.getElementById('password').value.trim();
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerText = 'Checking...';
+
+    const payload = {
+      action: currentRole.toLowerCase() + 'Login',
+      username: u,
+      password: p,
+      role: currentRole
+    };
+
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        showMsg('Login successful! Redirecting...', false);
+        // রিডাইরেক্ট অথবা ডেটা লোড
+        setTimeout(() => {
+          if (data.redirectUrl) window.location.href = data.redirectUrl;
+          else alert('স্বাগতম ' + u + '! লগইন সফল হয়েছে।');
+        }, 1000);
+      } else {
+        showMsg(data.message || 'Invalid username or password.', true);
+      }
+    } catch (err) {
+      showMsg('Google Apps Script সংযোগ ব্যর্থ হয়েছে। আবার চেষ্টা করুন।', true);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Access ' + currentRole + ' Panel';
+    }
+  }
+</script>
+
 </body>
 </html>
