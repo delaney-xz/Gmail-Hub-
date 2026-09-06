@@ -53,7 +53,7 @@ async function doLogin() {
   btn.disabled = true; btn.innerText = 'Authenticating…';
   try {
     const payload = new URLSearchParams({ username: user, password: pass }).toString();
-    const res = await fetch(`${API_BASE}?action=adminLogin`, {
+    const res = await fetch('https://script.google.com/macros/s/AKfycbzdPOjwlwcZLerYM1KStgofzqswB2l4Mqza37ayUU6OiPnRVfbuzNA-E5CKt2DUZaj7WQ/exec?action=adminLogin', {
       method: 'POST',
       mode: 'cors',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
