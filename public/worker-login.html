@@ -65,7 +65,7 @@ async function doLogin() {
   btn.disabled = true; btn.innerText = 'Signing in…';
 
   try {
-    const res  = await fetch('/api/auth/worker-login', {
+    const res = await fetch(`${API_BASE}?action=workerLogin`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ username: user, password: pass })

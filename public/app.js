@@ -4,6 +4,7 @@
  */
 
 // Application State
+const API_BASE = 'https://script.google.com/macros/s/AKfycbzdPOjwlwcZLerYM1KStgofzqswB2l4Mqza37ayUU6OiPnRVfbuzNA-E5CKt2DUZaj7WQ/exec';
 let currentRole = 'customer'; // 'customer', 'worker', 'admin'
 let accounts = [];
 let activeFilter = 'ALL';
@@ -30,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 async function loadAccounts() {
     try {
-        const res = await fetch(`/api/accounts?role=${currentRole}`);
+        const res = await fetch(`${API_BASE}/accounts?role=${currentRole}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         
@@ -112,7 +113,7 @@ async function setRole(role) {
 
     // Fetch role-specific sanitized/full data in background
     try {
-        const res = await fetch(`/api/accounts?role=${currentRole}`);
+        const res = await fetch(`accounts?role=${currentRole}`);
         if (res.ok) {
             const data = await res.json();
             if (Array.isArray(data)) {
@@ -549,7 +550,7 @@ async function quickChangeStatus(id, newStatus) {
 
     // Persist to backend
     try {
-        await fetch('/api/accounts/quick-status', {
+        await fetch('accounts/quick-status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, status: newStatus })
@@ -572,7 +573,7 @@ async function toggleVisibility(id, field, value) {
     updateAdminStats();
 
     try {
-        const res = await fetch('/api/accounts/visibility', {
+        const res = await fetch('accounts/visibility', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, field, value })
@@ -694,7 +695,7 @@ async function saveAccountModal() {
 
     // Persist to backend
     try {
-        const endpoint = id ? '/api/accounts/update' : '/api/accounts/create';
+        const endpoint = id ? 'accounts/update' : 'accounts/create';
         const res = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -725,7 +726,7 @@ async function deleteAccount(id) {
     showToast('Account deleted successfully', 'success');
 
     try {
-        const res = await fetch('/api/accounts/delete', {
+        const res = await fetch('accounts/delete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id })
@@ -755,7 +756,7 @@ async function performSheetSync() {
     const mode = document.getElementById('sync-mode-select').value;
 
     try {
-        const res = await fetch('/api/sync-sheet', {
+        const res = await fetch('sync-sheet', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sheetUrl, gid, mode })
@@ -782,7 +783,7 @@ async function performSheetSync() {
  * Export Accounts as CSV
  */
 function downloadCSV() {
-    window.location.href = '/api/export-csv';
+    window.location.href = 'export-csv';
     showToast('Exporting accounts to CSV...', 'info');
 }
 
