@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Login — Gmail Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+</head>
+<body class="auth-page">
+
+<div class="auth-card">
+  <div class="auth-logo">
+    <div class="auth-logo-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <rect width="20" height="16" x="2" y="4" rx="2"/>
+        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Gmail Hub</h1>
+      <p>Customer Portal — Sign in or Register</p>
+    </div>
+  </div>
+
+  <div class="auth-tabs" id="tab-bar">
+    <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+    <button class="auth-tab" onclick="switchTab('register')">Register</button>
+  </div>
+
+  <!-- Login Pane -->
+  <div class="auth-tab-pane active" id="pane-login">
+    <p class="auth-subtitle">Welcome back! Enter your credentials to access the customer portal.</p>
+    <div class="form-group">
+      <label class="form-label">Username</label>
+      <input class="form-input" type="text" id="login-user" placeholder="your_username" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <div class="form-error" id="login-err"></div>
+    <button class="btn btn-primary" id="btn-login" onclick="doLogin()">Sign In</button>
+    <p style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin-top:1rem;">
+      Don't have an account? <a href="#" onclick="switchTab('register');return false;" style="color:var(--accent-blue);">Register here</a>
+    </p>
+  </div>
+
+  <!-- Register Pane -->
+  <div class="auth-tab-pane" id="pane-register">
+    <p class="auth-subtitle">Create a new account to access the Gmail customer portal.</p>
+    <div class="form-group">
+      <label class="form-label">Choose Username</label>
+      <input class="form-input" type="text" id="reg-user" placeholder="your_username" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" type="password" id="reg-pass" placeholder="••••••••" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Confirm Password</label>
+      <input class="form-input" type="password" id="reg-pass2" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter') doRegister()">
+    </div>
+    <div class="form-error" id="reg-err"></div>
+    <button class="btn btn-primary" id="btn-reg" onclick="doRegister()">Create Account</button>
+    <p style="text-align:center;font-size:0.78rem;color:var(--text-muted);margin-top:1rem;">
+      Already registered? <a href="#" onclick="switchTab('login');return false;" style="color:var(--accent-blue);">Sign in</a>
+    </p>
+  </div>
+</div>
+
+<script>
+// If already logged in as customer, redirect
+const tok = localStorage.getItem('session_token');
+const role = localStorage.getItem('session_role');
+if (tok && role === 'customer') { window.location.href = '/customer-portal'; }
+
+function switchTab(name) {
+  document.querySelectorAll('.auth-tab').forEach((t, i) => {
+    t.classList.toggle('active', (i === 0 && name === 'login') || (i === 1 && name === 'register'));
+  });
+  document.getElementById('pane-login').classList.toggle('active', name === 'login');
+  document.getElementById('pane-register').classList.toggle('active', name === 'register');
+}
+
+async function doLogin() {
+  const btn = document.getElementById('btn-login');
+  const errEl = document.getElementById('login-err');
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+
+  errEl.style.display = 'none';
+  if (!user || !pass) { showErr(errEl, 'Please enter username and password.'); return; }
+
+  btn.disabled = true; btn.innerText = 'Signing in…';
+
+  try {
+    const res = await fetch('/api/auth/customer-login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ username: user, password: pass })
+    });
+    const data = await res.json();
+    if (data.success) {
+      localStorage.setItem('session_token', data.token);
+      localStorage.setItem('session_role', 'customer');
+      localStorage.setItem('session_username', data.username);
+      window.location.href = '/customer-portal';
+    } else {
+      showErr(errEl, data.error || 'Invalid username or password.');
+    }
+  } catch (e) {
+    showErr(errEl, 'Server error. Is the server running?');
+  } finally {
+    btn.disabled = false; btn.innerText = 'Sign In';
+  }
+}
+
+async function doRegister() {
+  const btn = document.getElementById('btn-reg');
+  const errEl = document.getElementById('reg-err');
+  const user  = document.getElementById('reg-user').value.trim();
+  const pass  = document.getElementById('reg-pass').value;
+  const pass2 = document.getElementById('reg-pass2').value;
+
+  errEl.style.display = 'none';
+  if (!user) { showErr(errEl, 'Username is required.'); return; }
+  if (user.length < 3) { showErr(errEl, 'Username must be at least 3 characters.'); return; }
+  if (!pass || pass.length < 4) { showErr(errEl, 'Password must be at least 4 characters.'); return; }
+  if (pass !== pass2) { showErr(errEl, 'Passwords do not match.'); return; }
+
+  btn.disabled = true; btn.innerText = 'Creating account…';
+
+  try {
+    const res = await fetch('/api/auth/customer-register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ username: user, password: pass })
+    });
+    const data = await res.json();
+    if (data.success) {
+      // Auto-login after registration
+      const res2 = await fetch('/api/auth/customer-login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username: user, password: pass })
+      });
+      const data2 = await res2.json();
+      if (data2.success) {
+        localStorage.setItem('session_token', data2.token);
+        localStorage.setItem('session_role', 'customer');
+        localStorage.setItem('session_username', data2.username);
+        window.location.href = '/customer-portal';
+      }
+    } else {
+      showErr(errEl, data.error || 'Registration failed.');
+    }
+  } catch (e) {
+    showErr(errEl, 'Server error. Is the server running?');
+  } finally {
+    btn.disabled = false; btn.innerText = 'Create Account';
+  }
+}
+
+function showErr(el, msg) {
+  el.innerText = msg;
+  el.style.display = 'block';
+}
+</script>
+</body>
+</html>

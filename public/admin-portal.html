@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Portal — Gmail Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<!-- Header -->
+<header class="portal-header">
+  <div class="portal-header-inner">
+    <div class="header-brand">
+      <div class="header-brand-icon" style="background:linear-gradient(135deg,#8250df,#bc8cff);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Gmail Hub</h1>
+        <p>Master Administration Panel</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-chip"><div class="pulse-dot"></div><span id="live-clock">--:--:--</span></div>
+      <span class="role-chip admin">Administrator</span>
+      <span class="user-chip" id="user-chip" style="cursor:pointer;" onclick="openProfileModal()" title="Edit Admin Profile">👤 Admin</span>
+      <button class="btn btn-sm" onclick="openSyncModal()">⟳ Sync Sheet</button>
+      <button class="btn btn-sm" onclick="downloadCSV()">⬇ CSV</button>
+      <button class="btn btn-sm" onclick="openAddModal()" style="border-color:var(--accent-purple);color:var(--accent-purple);">+ Add</button>
+      <button class="btn btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+</header>
+
+<main class="portal-main">
+  <!-- Info banner -->
+  <div style="background:rgba(188,140,255,.08);border:1px solid rgba(188,140,255,.2);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.83rem;color:var(--text-secondary);display:flex;align-items:center;gap:0.5rem;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-purple)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    <span><strong style="color:var(--accent-purple);">Admin Mode</strong> — Full system access. You can manage visibility toggles, delete records, and update your admin profile.</span>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Accounts</div>
+      <div class="stat-value" id="stat-total">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label" style="color:var(--accent-green)">Available</div>
+      <div class="stat-value" id="stat-avail">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label" style="color:var(--accent-blue)">Verify</div>
+      <div class="stat-value" id="stat-ver">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label" style="color:var(--accent-amber)">Pending</div>
+      <div class="stat-value" id="stat-pend">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label" style="color:var(--accent-purple)">Sold</div>
+      <div class="stat-value" id="stat-sold">0</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="control-bar">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="search-input" placeholder="Search by Gmail, ID, notes…" oninput="handleSearch()">
+    </div>
+    <div class="filter-pills">
+      <button class="pill active" data-filter="ALL"       onclick="setFilter('ALL')">All</button>
+      <button class="pill"        data-filter="Available" onclick="setFilter('Available')">Available</button>
+      <button class="pill"        data-filter="Verify"    onclick="setFilter('Verify')">Verify</button>
+      <button class="pill"        data-filter="Pending"   onclick="setFilter('Pending')">Pending</button>
+      <button class="pill"        data-filter="Sold"      onclick="setFilter('Sold')">Sold</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th>Gmail Address</th>
+          <th>Password</th>
+          <th style="min-width:180px">Live 2FA Code</th>
+          <th>Recovery / Status</th>
+          <th>Customer Visibility</th>
+          <th style="width:110px">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-body">
+        <tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-muted);">Loading accounts…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="modal-profile">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="modal-title">Admin Profile Settings</h3>
+      <button class="modal-close" onclick="closeModal('modal-profile')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:1rem;">Update your admin credentials. These changes will be saved to the local server immediately. To sync back to Google Sheets automatically, a webhook deployment is required.</p>
+      <div class="form-group">
+        <label class="form-label">Admin Username</label>
+        <input class="form-input" type="text" id="prof-user">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Admin Password</label>
+        <input class="form-input" type="password" id="prof-pass" placeholder="Enter new password">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-profile')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProfile()" style="width:auto;padding:0.6rem 1.5rem;background:var(--accent-purple);border-color:var(--accent-purple);">Save Credentials</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit / Add Modal -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="modal-title" id="modal-title">Edit Account</h3>
+      <button class="modal-close" onclick="closeModal('modal-edit')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="form-group">
+        <label class="form-label">Serial #</label>
+        <input class="form-input" type="number" id="edit-serial">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Gmail Address</label>
+        <input class="form-input" type="email" id="edit-gmail">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="text" id="edit-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">2FA Secret Key</label>
+        <input class="form-input" type="text" id="edit-2fa">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Recovery Email</label>
+        <input class="form-input" type="email" id="edit-recovery">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="edit-status">
+          <option value="Available">Available</option>
+          <option value="Verify">Verify</option>
+          <option value="Sold">Sold</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <input class="form-input" type="text" id="edit-notes">
+      </div>
+      
+      <div style="border-top:1px solid var(--border);margin-top:1.5rem;padding-top:1rem;">
+        <label class="form-label">Visibility Controls</label>
+        <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;font-size:0.85rem;">
+          <input type="checkbox" id="edit-hide-pass"> Hide Password from Customer
+        </label>
+        <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;font-size:0.85rem;">
+          <input type="checkbox" id="edit-hide-2fa"> Hide 2FA from Customer
+        </label>
+        <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:var(--accent-rose);">
+          <input type="checkbox" id="edit-hide-all"> Hide entire row from Customer
+        </label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="btn-del" onclick="deleteEditing()" style="margin-right:auto;">Delete</button>
+      <button class="btn" onclick="closeModal('modal-edit')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()" style="width:auto;padding:0.6rem 1.5rem;background:var(--accent-purple);border-color:var(--accent-purple);">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sync Modal -->
+<div class="modal-overlay" id="modal-sync">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="modal-title">Sync Google Sheet</h3>
+      <button class="modal-close" onclick="closeModal('modal-sync')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Sheet URL</label>
+        <input class="form-input" type="text" id="sync-url" value="https://docs.google.com/spreadsheets/d/13uKQBxLRbF5lc65GeXimDdVTjao-FsqDALVbhLXAHEA/edit?gid=0#gid=0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sync Mode</label>
+        <select class="form-select" id="sync-mode">
+          <option value="merge">Merge (update existing + add new)</option>
+          <option value="replace">Replace all</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-sync')">Cancel</button>
+      <button class="btn btn-primary" id="btn-sync" onclick="doSync()" style="width:auto;padding:0.6rem 1.5rem;background:var(--accent-purple);border-color:var(--accent-purple);">Sync Now</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script src="totp.js"></script>
+<script>
+// ── Auth guard ───────────────────────────────────────────────────────────────
+const sessionToken = localStorage.getItem('session_token');
+const sessionRole  = localStorage.getItem('session_role');
+let adminName      = localStorage.getItem('session_username') || 'admin';
+
+if (!sessionToken || sessionRole !== 'admin') { window.location.href = '/admin-login'; }
+
+document.getElementById('user-chip').textContent = '👤 ' + adminName;
+const savedTheme = localStorage.getItem('theme') || 'dark';
+document.documentElement.setAttribute('data-theme', savedTheme);
+
+// ── State ────────────────────────────────────────────────────────────────────
+let accounts     = [];
+let activeFilter = 'ALL';
+let searchQ      = '';
+let revealed     = new Set();
+let tickerId     = null;
+let editingId    = null;
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    await load();
+    // Ensure all buttons default to type="button" to avoid accidental form submissions
+    document.querySelectorAll('button').forEach(b => b.type = 'button');
+    startTicker();
+});
+
+async function load() {
+  try {
+    const res = await fetch('/api/accounts?role=admin');
+    const d   = await res.json();
+    if (Array.isArray(d)) accounts = d;
+    applyFilters();
+    updateStats();
+  } catch { toast('Failed to load accounts', 'error'); }
+}
+
+function doLogout() {
+  ['session_token','session_role','session_username'].forEach(k => localStorage.removeItem(k));
+  window.location.href = '/admin-login';
+}
+
+function openProfileModal() {
+  document.getElementById('prof-user').value = adminName;
+  document.getElementById('prof-pass').value = '';
+  openModal('modal-profile');
+}
+
+async function saveProfile() {
+  const u = document.getElementById('prof-user').value.trim();
+  const p = document.getElementById('prof-pass').value;
+  if (!u || !p) { toast('Username and password required', 'error'); return; }
+  
+  try {
+    const res = await fetch('/api/auth/admin-update', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ username: u, password: p })
+    });
+    const data = await res.json();
+    if (data.success) {
+      adminName = u;
+      localStorage.setItem('session_username', u);
+      document.getElementById('user-chip').textContent = '👤 ' + u;
+      toast('Profile updated locally', 'success');
+      closeModal('modal-profile');
+    } else {
+      toast('Update failed', 'error');
+    }
+  } catch (e) {
+    toast('Server error', 'error');
+  }
+}
+
+// ── Filters & Stats ──────────────────────────────────────────────────────────
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.pill[data-filter]').forEach(p =>
+    p.classList.toggle('active', p.dataset.filter === f));
+  applyFilters();
+}
+
+function handleSearch() {
+  searchQ = document.getElementById('search-input').value.trim().toLowerCase();
+  applyFilters();
+}
+
+function updateStats() {
+  const count = f => accounts.filter(a => (a.status || 'Available') === f).length;
+  document.getElementById('stat-total').textContent = accounts.length;
+  document.getElementById('stat-avail').textContent = count('Available');
+  document.getElementById('stat-ver').textContent   = count('Verify');
+  document.getElementById('stat-pend').textContent  = count('Pending');
+  document.getElementById('stat-sold').textContent  = count('Sold');
+
+  const allExSold = accounts.length - count('Sold');
+  const pill = f => document.querySelector(`.pill[data-filter="${f}"]`);
+  if (pill('ALL')) pill('ALL').textContent = `All (${allExSold})`;
+  ['Available','Verify','Pending','Sold'].forEach(f => {
+    if (pill(f)) pill(f).textContent = `${f} (${count(f)})`;
+  });
+}
+
+function getFiltered() {
+  return accounts.filter(a => {
+    const st = a.status || 'Available';
+    if (activeFilter === 'ALL') {
+      if (st === 'Sold') return false; // Sold hidden from ALL filter
+    } else {
+      if (st !== activeFilter) return false;
+    }
+    if (searchQ) {
+      const g = (a.gmail || '').toLowerCase();
+      const n = (a.notes || '').toLowerCase();
+      const r = (a.recoveryEmail || '').toLowerCase();
+      if (!g.includes(searchQ) && !n.includes(searchQ) && !r.includes(searchQ) && !String(a.serial).includes(searchQ)) return false;
+    }
+    return true;
+  });
+}
+
+function applyFilters() { renderTable(); }
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody  = document.getElementById('tbl-body');
+  const nowSec = Math.floor(Date.now() / 1000);
+  const rows   = getFiltered();
+
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--text-muted);">No accounts found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(a => {
+    // Password
+    const rev = revealed.has(a.id);
+    const passDisplay = rev ? esc(a.password || '') : '••••••••••';
+    const eyeSvg = rev
+      ? `<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/>`
+      : `<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>`;
+    const passCell = `<div class="cell-row">
+      <span class="mono ${rev ? '' : 'pass-mask'}" id="pv-${a.id}">${passDisplay}</span>
+      <button class="copy-btn" onclick="toggleReveal('${a.id}')" title="${rev?'Hide':'Show'}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${eyeSvg}</svg></button>
+      <button class="copy-btn" onclick="cp('${ej(a.password)}',this,'Password')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+    </div>`;
+
+    // 2FA
+    let twoCell;
+    if (!a.twoFactorSecret || a.twoFactorSecret.trim() === '') {
+      twoCell = `<span class="totp-na">—</span>`;
+    } else {
+      const r  = window.TOTPGenerator.generate(a.twoFactorSecret, nowSec);
+      const rem = r.remaining;
+      const pct = (rem / 30) * 100;
+      const wc  = rem <= 5 ? 'danger' : rem <= 10 ? 'warning' : '';
+      twoCell = `<div class="totp-box" id="totp-box-${a.id}">
+        <div class="totp-row">
+          <span class="totp-digits" id="totp-code-${a.id}">${r.formatted || '------'}</span>
+          <span class="totp-pill ${wc}" id="totp-pill-${a.id}">${rem}s</span>
+          <button class="copy-btn" onclick="copyTotp('${a.id}',this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+        </div>
+        <div class="totp-bar-bg"><div class="totp-bar ${wc}" id="totp-bar-${a.id}" style="width:${pct}%"></div></div>
+      </div>`;
+    }
+
+    // Status + Recovery
+    const st = a.status || 'Available';
+    const recStatus = `<div style="display:flex;flex-direction:column;gap:6px;">
+      ${a.recoveryEmail ? `<div class="cell-row"><span class="mono" style="color:var(--text-secondary);font-size:0.75rem">${esc(a.recoveryEmail)}</span></div>` : ''}
+      <select class="status-select" style="width:100px" onchange="quickStatus('${a.id}',this.value)">
+        <option value="Available" ${st==='Available'?'selected':''}>Available</option>
+        <option value="Verify"    ${st==='Verify'   ?'selected':''}>Verify</option>
+        <option value="Sold"      ${st==='Sold'     ?'selected':''}>Sold</option>
+        <option value="Pending"   ${st==='Pending'  ?'selected':''}>Pending</option>
+      </select>
+    </div>`;
+
+    // Visibility toggles
+    const vis = `<div class="vis-group">
+      <button class="vis-btn ${a.hidePasswordFromCustomer ? 'hidden':'shown'}" onclick="toggleVis('${a.id}','pass')">Pwd: ${a.hidePasswordFromCustomer ? 'HIDDEN':'SHOWN'}</button>
+      <button class="vis-btn ${a.hide2FaFromCustomer ? 'hidden':'shown'}" onclick="toggleVis('${a.id}','2fa')">2FA: ${a.hide2FaFromCustomer ? 'HIDDEN':'SHOWN'}</button>
+      <button class="vis-btn ${a.hideFromCustomer ? 'hidden':'shown'}" onclick="toggleVis('${a.id}','all')">Row: ${a.hideFromCustomer ? 'HIDDEN':'SHOWN'}</button>
+    </div>`;
+
+    const audit = a.lastModifiedBy ? `<div style="font-size:0.65rem;color:var(--text-muted);margin-top:4px">Edited by ${esc(a.lastModifiedBy)}</div>` : '';
+
+    return `<tr>
+      <td style="font-weight:600;color:var(--text-muted)">${a.serial||'—'}</td>
+      <td>
+        <div class="cell-row"><span class="mono" style="font-weight:500">${esc(a.gmail)}</span><button class="copy-btn" onclick="cp('${ej(a.gmail)}',this,'Gmail')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div>
+        ${audit}
+      </td>
+      <td>${passCell}</td>
+      <td>${twoCell}</td>
+      <td>${recStatus}</td>
+      <td>${vis}</td>
+      <td>
+        <button class="btn btn-sm" onclick="openEditModal('${a.id}')" style="border-color:var(--accent-purple);color:var(--accent-purple);width:100%;">Edit Full</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── TOTP Ticker ───────────────────────────────────────────────────────────────
+function startTicker() {
+  if (tickerId) clearInterval(tickerId);
+  tickerId = setInterval(() => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const rem    = 30 - (nowSec % 30);
+    const pct    = (rem / 30) * 100;
+    const wc     = rem <= 5 ? 'danger' : rem <= 10 ? 'warning' : '';
+    document.getElementById('live-clock').textContent = new Date().toTimeString().split(' ')[0];
+    for (const a of accounts) {
+      if (!a.twoFactorSecret || a.twoFactorSecret.trim() === '') continue;
+      const r  = window.TOTPGenerator.generate(a.twoFactorSecret, nowSec);
+      const ce = document.getElementById(`totp-code-${a.id}`);
+      const pe = document.getElementById(`totp-pill-${a.id}`);
+      const be = document.getElementById(`totp-bar-${a.id}`);
+      if (ce && ce.textContent !== r.formatted) ce.textContent = r.formatted;
+      if (pe) { pe.textContent = `${rem}s`; pe.className = `totp-pill ${wc}`; }
+      if (be) { be.style.width = `${pct}%`; be.className = `totp-bar ${wc}`; }
+    }
+  }, 1000);
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function toggleReveal(id) {
+  if (revealed.has(id)) revealed.delete(id); else revealed.add(id);
+  renderTable();
+}
+
+function copyTotp(id, btn) {
+  const a = accounts.find(x => x.id === id);
+  if (!a || !a.twoFactorSecret) return;
+  const r = window.TOTPGenerator.generate(a.twoFactorSecret);
+  if (r && r.code) cp(r.code, btn, '2FA');
+}
+
+async function quickStatus(id, status) {
+  const a = accounts.find(x => x.id === id);
+  if (!a) return;
+  a.status = status;
+  updateStats();
+  toast(`Status → ${status}`, 'success');
+  try {
+    await fetch('/api/accounts/quick-status', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ id, status })
+    });
+  } catch {}
+}
+
+async function toggleVis(id, type) {
+  const a = accounts.find(x => x.id === id);
+  if (!a) return;
+  if (type === 'pass') a.hidePasswordFromCustomer = !a.hidePasswordFromCustomer;
+  if (type === '2fa')  a.hide2FaFromCustomer = !a.hide2FaFromCustomer;
+  if (type === 'all')  a.hideFromCustomer = !a.hideFromCustomer;
+  renderTable();
+  try {
+    await fetch('/api/accounts/toggle-visibility', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        id,
+        hidePasswordFromCustomer: a.hidePasswordFromCustomer,
+        hide2FaFromCustomer: a.hide2FaFromCustomer,
+        hideFromCustomer: a.hideFromCustomer
+      })
+    });
+    toast('Visibility updated', 'success');
+  } catch { toast('Save error', 'error'); }
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Add New Account';
+  ['edit-id','edit-serial','edit-gmail','edit-password','edit-2fa','edit-recovery','edit-notes'].forEach(i => {
+    const el = document.getElementById(i);
+    if (el) el.value = i === 'edit-serial' ? String(accounts.length + 1) : '';
+  });
+  document.getElementById('edit-status').value = 'Available';
+  document.getElementById('edit-hide-pass').checked = true;
+  document.getElementById('edit-hide-2fa').checked = false;
+  document.getElementById('edit-hide-all').checked = false;
+  document.getElementById('btn-del').style.display = 'none';
+  openModal('modal-edit');
+}
+
+function openEditModal(id) {
+  const a = accounts.find(x => x.id === id);
+  if (!a) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = `Edit — ${a.gmail || a.id}`;
+  document.getElementById('edit-id').value        = a.id;
+  document.getElementById('edit-serial').value    = a.serial || '';
+  document.getElementById('edit-gmail').value     = a.gmail || '';
+  document.getElementById('edit-password').value  = a.password || '';
+  document.getElementById('edit-2fa').value       = a.twoFactorSecret || '';
+  document.getElementById('edit-recovery').value  = a.recoveryEmail || '';
+  document.getElementById('edit-status').value    = a.status || 'Available';
+  document.getElementById('edit-notes').value     = a.notes || '';
+  document.getElementById('edit-hide-pass').checked = !!a.hidePasswordFromCustomer;
+  document.getElementById('edit-hide-2fa').checked  = !!a.hide2FaFromCustomer;
+  document.getElementById('edit-hide-all').checked  = !!a.hideFromCustomer;
+  document.getElementById('btn-del').style.display  = 'block';
+  openModal('modal-edit');
+}
+
+async function saveEdit() {
+  const id      = document.getElementById('edit-id').value;
+  const gmail   = document.getElementById('edit-gmail').value.trim();
+  const newPass = document.getElementById('edit-password').value.trim();
+  if (!gmail) { toast('Gmail is required', 'error'); return; }
+
+  const payload = {
+    id:              id || `acc-${Date.now()}`,
+    serial:          parseInt(document.getElementById('edit-serial').value) || accounts.length + 1,
+    gmail,
+    password:        newPass,
+    twoFactorSecret: document.getElementById('edit-2fa').value.trim(),
+    recoveryEmail:   document.getElementById('edit-recovery').value.trim(),
+    status:          document.getElementById('edit-status').value,
+    notes:           document.getElementById('edit-notes').value.trim(),
+    hidePasswordFromCustomer: document.getElementById('edit-hide-pass').checked,
+    hide2FaFromCustomer:      document.getElementById('edit-hide-2fa').checked,
+    hideFromCustomer:         document.getElementById('edit-hide-all').checked,
+    changedBy:       adminName
+  };
+
+  if (id) {
+    const idx = accounts.findIndex(a => a.id === id);
+    if (idx !== -1) accounts[idx] = { ...accounts[idx], ...payload };
+  } else {
+    accounts.push(payload);
+  }
+
+  closeModal('modal-edit');
+  applyFilters();
+  updateStats();
+  toast(id ? 'Account updated' : 'Account created', 'success');
+
+  try {
+    const ep = id ? '/api/accounts/update' : '/api/accounts/create';
+    await fetch(ep, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  } catch { toast('Backend save error', 'warning'); }
+}
+
+async function deleteEditing() {
+  if (!editingId || !confirm('Are you sure you want to delete this account permanently?')) return;
+  const id = editingId;
+  accounts = accounts.filter(a => a.id !== id);
+  closeModal('modal-edit');
+  applyFilters();
+  updateStats();
+  toast('Account deleted', 'info');
+  try {
+    await fetch('/api/accounts/delete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id }) });
+  } catch {}
+}
+
+async function doSync() {
+  const btn = document.getElementById('btn-sync');
+  btn.disabled = true; btn.textContent = 'Syncing…';
+  try {
+    const res  = await fetch('/api/sync-sheet', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ sheetUrl: document.getElementById('sync-url').value, mode: document.getElementById('sync-mode').value })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Sync failed');
+    closeModal('modal-sync');
+    await load();
+    toast(`Synced ${data.importedCount} accounts`, 'success');
+  } catch (e) { toast(`Sync error: ${e.message}`, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Sync Now'; }
+}
+
+function openSyncModal() { openModal('modal-sync'); }
+function downloadCSV()   { window.location.href = '/api/export-csv'; toast('Exporting CSV…','info'); }
+function openModal(id)   { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id)  { document.getElementById(id)?.classList.remove('open'); }
+
+async function cp(text, btn, label) {
+  if (!text) { toast(`Empty ${label}`, 'error'); return; }
+  try { await navigator.clipboard.writeText(text); } catch {
+    const t = document.createElement('textarea'); t.value = text;
+    document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+  }
+  toast(`Copied ${label}!`, 'success');
+  if (btn) {
+    btn.classList.add('copied');
+    const orig = btn.innerHTML;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 1500);
+  }
+}
+
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+function ej(s)  { if (!s) return ''; return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function toast(msg, type='info') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${esc(msg)}</span>`;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+</script>
+</body>
+</html>
