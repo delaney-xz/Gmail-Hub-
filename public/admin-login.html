@@ -52,170 +52,12 @@ async function doLogin() {
   if (!user || !pass) { showErr(errEl, 'Please enter username and password.'); return; }
   btn.disabled = true; btn.innerText = 'Authenticating…';
   try {
-    const query = new URLSearchParams({ username: user, password: pass }).toString();
-    const res = await fetch(`${API_BASE}?action=adminLogin&${query}`, { method: 'GET', mode: 'cors' });
-    const data = await res.json();
-    if (data.success) {
-      localStorage.setItem('session_token', data.token);
-      localStorage.setItem('session_role', 'admin');
-      localStorage.setItem('session_username', data.username);
-      window.location.href = '/admin-portal';
-    } else {
-      showErr(errEl, data.error || 'Invalid credentials.');
-    }
-  } catch (e) {
-    showErr(errEl, 'Server error. Is the server running?');
-  } finally {
-    btn.disabled = false; btn.innerText = 'Access Admin Panel';
-  }
-}
-function showErr(el, msg) { el.innerText = msg; el.style.display = 'block'; }
-</script>
-</body>
-</html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Login — Gmail Hub</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css">
-</head>
-<body class="auth-page">
-<div class="auth-card">
-  <div class="auth-logo">
-    <div class="auth-logo-icon" style="background:linear-gradient(135deg,#8250df,#bc8cff);">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      </svg>
-    </div>
-    <div>
-      <h1>Admin Panel</h1>
-      <p>Gmail Hub — Administrator Access</p>
-    </div>
-  </div>
-  <p class="auth-subtitle" style="margin-bottom:1.5rem;">Restricted area. Provide admin credentials to proceed.</p>
-  <div class="form-group">
-    <label class="form-label">Admin Username</label>
-    <input class="form-input" type="text" id="login-user" placeholder="admin" autocomplete="username">
-  </div>
-  <div class="form-group">
-    <label class="form-label">Admin Password</label>
-    <input class="form-input" type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
-  </div>
-  <div class="form-error" id="login-err"></div>
-  <button class="btn btn-primary" id="btn-login" onclick="doLogin()" style="background:linear-gradient(135deg,#8250df,#bc8cff);border-color:transparent;">Access Admin Panel</button>
-  <p style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-top:1.5rem;">
-    <a href="/customer-login" style="color:var(--accent-blue);">Customer Login</a> · 
-    <a href="/worker-login" style="color:var(--accent-amber);">Worker Login</a>
-  </p>
-</div>
-<script>
-const API_BASE = 'https://script.google.com/macros/s/AKfycbzdPOjwlwcZLerYM1KStgofzqswB2l4Mqza37ayUU6OiPnRVfbuzNA-E5CKt2DUZaj7WQ/exec';
-const tok = localStorage.getItem('session_token');
-const role = localStorage.getItem('session_role');
-if (tok && role === 'admin') { window.location.href = '/admin-portal'; }
-async function doLogin() {
-  const btn = document.getElementById('btn-login');
-  const errEl = document.getElementById('login-err');
-  const user = document.getElementById('login-user').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  errEl.style.display = 'none';
-  if (!user || !pass) { showErr(errEl, 'Please enter username and password.'); return; }
-  btn.disabled = true; btn.innerText = 'Authenticating…';
-  try {
-    const query = new URLSearchParams({ username: user, password: pass }).toString();
-    const res = await fetch(`${API_BASE}?action=adminLogin&${query}`, { method: 'GET', mode: 'cors' });
-    const data = await res.json();
-    if (data.success) {
-      localStorage.setItem('session_token', data.token);
-      localStorage.setItem('session_role', 'admin');
-      localStorage.setItem('session_username', data.username);
-      window.location.href = '/admin-portal';
-    } else {
-      showErr(errEl, data.error || 'Invalid credentials.');
-    }
-  } catch (e) {
-    showErr(errEl, 'Server error. Is the server running?');
-  } finally {
-    btn.disabled = false; btn.innerText = 'Access Admin Panel';
-  }
-}
-function showErr(el, msg) { el.innerText = msg; el.style.display = 'block'; }
-</script>
-</body>
-</html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Login — Gmail Hub</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared.css">
-</head>
-<body class="auth-page">
-
-<div class="auth-card">
-  <div class="auth-logo">
-    <div class="auth-logo-icon" style="background:linear-gradient(135deg,#8250df,#bc8cff);">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      </svg>
-    </div>
-    <div>
-      <h1>Admin Panel</h1>
-      <p>Gmail Hub — Administrator Access</p>
-    </div>
-  </div>
-
-  <p class="auth-subtitle" style="margin-bottom:1.5rem;">Restricted area. Provide admin credentials to proceed.</p>
-
-  <div class="form-group">
-    <label class="form-label">Admin Username</label>
-    <input class="form-input" type="text" id="login-user" placeholder="admin" autocomplete="username">
-  </div>
-  <div class="form-group">
-    <label class="form-label">Admin Password</label>
-    <input class="form-input" type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
-  </div>
-  <div class="form-error" id="login-err"></div>
-  <button class="btn btn-primary" id="btn-login" onclick="doLogin()" style="background:linear-gradient(135deg,#8250df,#bc8cff);border-color:transparent;">Access Admin Panel</button>
-
-  <p style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-top:1.5rem;">
-    <a href="/customer-login" style="color:var(--accent-blue);">Customer Login</a> · 
-    <a href="/worker-login" style="color:var(--accent-amber);">Worker Login</a>
-  </p>
-</div>
-
-<script>
-const API_BASE = 'https://script.google.com/macros/s/AKfycbzdPOjwlwcZLerYM1KStgofzqswB2l4Mqza37ayUU6OiPnRVfbuzNA-E5CKt2DUZaj7WQ/exec';
-const tok = localStorage.getItem('session_token');
-const role = localStorage.getItem('session_role');
-if (tok && role === 'admin') { window.location.href = '/admin-portal'; }
-
-async function doLogin() {
-  const btn   = document.getElementById('btn-login');
-  const errEl = document.getElementById('login-err');
-  const user  = document.getElementById('login-user').value.trim();
-  const pass  = document.getElementById('login-pass').value;
-
-  errEl.style.display = 'none';
-  if (!user || !pass) { showErr(errEl, 'Please enter username and password.'); return; }
-
-  btn.disabled = true; btn.innerText = 'Authenticating…';
-
-  try {
-    const query = new URLSearchParams({
-      username: user,
-      password: pass
-    }).toString();
-    const res = await fetch(`${API_BASE}?action=adminLogin&${query}`, {
-      method: 'GET',
-      mode: 'cors'
+    const payload = new URLSearchParams({ username: user, password: pass }).toString();
+    const res = await fetch(`${API_BASE}?action=adminLogin`, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: payload
     });
     const data = await res.json();
     if (data.success) {
@@ -232,7 +74,6 @@ async function doLogin() {
     btn.disabled = false; btn.innerText = 'Access Admin Panel';
   }
 }
-
 function showErr(el, msg) { el.innerText = msg; el.style.display = 'block'; }
 </script>
 </body>
