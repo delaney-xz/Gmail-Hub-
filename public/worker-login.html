@@ -66,6 +66,7 @@ async function doLogin() {
     if (data.success) {
       localStorage.setItem('session_token', data.token);
       localStorage.setItem('session_role', 'worker');
+      localStorage.setItem('session_canEdit', data.canEdit ? 'true' : 'false');
       localStorage.setItem('session_username', data.username);
       window.location.href = './worker-portal.html';
     } else {

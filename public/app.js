@@ -35,7 +35,7 @@ async function loadAccounts() {
             method: 'POST',
             mode: 'cors',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'getAccounts' })
+            body: JSON.stringify({ action: 'getAccounts', role: currentRole })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const payload = await res.json();

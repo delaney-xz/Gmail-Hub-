@@ -179,7 +179,7 @@ let accounts     = [];
 let activeFilter = 'ALL';
 let searchQ      = '';
 let revealed     = new Set();
-let tickerId     = null;
+let canEdit = localStorage.getItem('session_canEdit') === 'true';
 let editingId    = null;
 
 // ── Init ─────────────────────────────────────────────────────────────────────
@@ -191,8 +191,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function load() {
   try {
-    const res = await fetch('/api/accounts?role=worker');
-    const d   = await res.json();
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'getAccounts', role: 'worker' })
+    });
+    const d = await res.json();
     if (Array.isArray(d)) accounts = d;
     applyFilters();
     updatePillCounts();
@@ -317,7 +322,9 @@ function renderTable() {
       <td>${recCell}</td>
       <td>${statusCell}</td>
       <td>${audit}</td>
-      <td style="text-align:right"><button class="btn btn-sm" onclick="openEditModal('${a.id}')" style="border-color:var(--accent-amber);color:var(--accent-amber);">Edit</button></td>
+       <td style="text-align:right">${canEdit ? `
+         <button class="btn btn-sm" onclick="openEditModal('${a.id}')" style="border-color:var(--accent-amber);color:var(--accent-amber);">Edit</button>
+       ` : '<span class="badge warning">View Only (Edit permission required from Admin)</span>'}</td>
     </tr>`;
   }).join('');
 }
