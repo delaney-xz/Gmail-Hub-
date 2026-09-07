@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gmail Hub - Redirecting...</title>
+<script>
+  const tok = localStorage.getItem('session_token');
+  const role = localStorage.getItem('session_role');
+  if (tok && role) {
+    if (role === 'admin') window.location.href = './admin-portal.html';
+    else if (role === 'worker') window.location.href = './worker-portal.html';
+    else window.location.href = './customer-portal.html';
+  } else {
+    window.location.href = './customer-login.html';
+  }
+</script>
+</head>
+<body style="background:#0d1117;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
+  <p>Redirecting to portal...</p>
+</body>
+</html>

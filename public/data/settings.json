@@ -1,0 +1,12 @@
+﻿{
+    "adminUser":  "delaney",
+    "adminPass":  "rumman7070roky",
+    "workerPass":  "worker123",
+    "sheetId":  "13uKQBxLRbF5lc65GeXimDdVTjao-FsqDALVbhLXAHEA",
+    "sheetUrl":  "https://docs.google.com/spreadsheets/d/13uKQBxLRbF5lc65GeXimDdVTjao-FsqDALVbhLXAHEA/edit?gid=0#gid=0",
+    "gidCustomer":  "0",
+    "gidWorker":  "1740739210",
+    "gidAdmin":  "1453310958",
+    "defaultGid":  "0",
+    "port":  5000
+}

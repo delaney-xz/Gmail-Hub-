@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Worker Portal — Gmail Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<!-- Header -->
+<header class="portal-header">
+  <div class="portal-header-inner">
+    <div class="header-brand">
+      <div class="header-brand-icon" style="background:linear-gradient(135deg,#d29922,#e3913a);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <rect width="20" height="16" x="2" y="4" rx="2"/>
+          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Gmail Hub</h1>
+        <p>Worker Management Portal</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-chip"><div class="pulse-dot"></div><span id="live-clock">--:--:--</span></div>
+      <span class="role-chip worker">Worker</span>
+      <span class="user-chip" id="user-chip">👤 …</span>
+      <button class="btn btn-sm" onclick="openSyncModal()">⟳ Sync Sheet</button>
+      <button class="btn btn-sm" onclick="downloadCSV()">⬇ CSV</button>
+      <button class="btn btn-sm" onclick="openAddModal()" style="border-color:var(--accent-amber);color:var(--accent-amber);">+ Add</button>
+      <button class="btn btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+</header>
+
+<main class="portal-main">
+  <!-- Info banner -->
+  <div style="background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.2);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.83rem;color:var(--text-secondary);display:flex;align-items:center;gap:0.5rem;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-amber)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+    <span><strong style="color:var(--accent-amber);">Worker Mode</strong> — Full edit access. Password changes are tracked with your username. <em>Sold accounts only visible in the Sold filter.</em></span>
+  </div>
+
+  <!-- Controls -->
+  <div class="control-bar">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="search-input" placeholder="Search Gmail, serial, notes…" oninput="handleSearch()">
+    </div>
+    <div class="filter-pills">
+      <button class="pill active" data-filter="ALL"       onclick="setFilter('ALL')">All</button>
+      <button class="pill"        data-filter="Available" onclick="setFilter('Available')">Available</button>
+      <button class="pill"        data-filter="Verify"    onclick="setFilter('Verify')">Verify</button>
+      <button class="pill"        data-filter="Pending"   onclick="setFilter('Pending')">Pending</button>
+      <button class="pill"        data-filter="Sold"      onclick="setFilter('Sold')">Sold</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:45px">#</th>
+          <th>Gmail Address</th>
+          <th>Password</th>
+          <th style="min-width:180px">Live 2FA Code</th>
+          <th>Recovery Email</th>
+          <th>Status</th>
+          <th>Last Edit</th>
+          <th style="text-align:right;width:90px">Edit</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-body">
+        <tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--text-muted);">Loading accounts…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Edit / Add Modal -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="modal-title" id="modal-title">Edit Account</h3>
+      <button class="modal-close" onclick="closeModal('modal-edit')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id">
+      <div class="form-group">
+        <label class="form-label">Serial #</label>
+        <input class="form-input" type="number" id="edit-serial">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Gmail Address</label>
+        <input class="form-input" type="email" id="edit-gmail">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password <span style="color:var(--accent-amber);font-size:0.72rem;">(changes are audit-logged with your username)</span></label>
+        <input class="form-input" type="text" id="edit-password" placeholder="Account password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">2FA Secret Key</label>
+        <input class="form-input" type="text" id="edit-2fa" placeholder="e.g. znv2 szqq y4tn m5k5 …">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Recovery Email</label>
+        <input class="form-input" type="email" id="edit-recovery">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="edit-status">
+          <option value="Available">Available</option>
+          <option value="Verify">Verify</option>
+          <option value="Sold">Sold</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <input class="form-input" type="text" id="edit-notes" placeholder="Optional notes…">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-edit')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()" style="width:auto;padding:0.6rem 1.5rem;">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sync Modal -->
+<div class="modal-overlay" id="modal-sync">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="modal-title">Sync Google Sheet</h3>
+      <button class="modal-close" onclick="closeModal('modal-sync')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Sheet URL</label>
+        <input class="form-input" type="text" id="sync-url" value="https://docs.google.com/spreadsheets/d/13uKQBxLRbF5lc65GeXimDdVTjao-FsqDALVbhLXAHEA/edit?gid=0#gid=0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sync Mode</label>
+        <select class="form-select" id="sync-mode">
+          <option value="merge">Merge (update existing + add new)</option>
+          <option value="replace">Replace all</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-sync')">Cancel</button>
+      <button class="btn btn-primary" id="btn-sync" onclick="doSync()" style="width:auto;padding:0.6rem 1.5rem;">Sync Now</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script src="totp.js"></script>
+<script>
+// ── Auth guard ───────────────────────────────────────────────────────────────
+const sessionToken = localStorage.getItem('session_token');
+const sessionRole  = localStorage.getItem('session_role');
+const workerName   = localStorage.getItem('session_username') || 'worker';
+
+if (!sessionToken || sessionRole !== 'worker') { window.location.href = '/worker-login'; }
+
+document.getElementById('user-chip').textContent = '👤 ' + workerName;
+const savedTheme = localStorage.getItem('theme') || 'dark';
+document.documentElement.setAttribute('data-theme', savedTheme);
+
+// ── State ────────────────────────────────────────────────────────────────────
+let accounts     = [];
+let activeFilter = 'ALL';
+let searchQ      = '';
+let revealed     = new Set();
+let canEdit = localStorage.getItem('session_canEdit') === 'true';
+let editingId    = null;
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await load();
+  startTicker();
+  updatePillCounts();
+});
+
+async function load() {
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'getAccounts', role: 'worker' })
+    });
+    const d = await res.json();
+    if (Array.isArray(d)) accounts = d;
+    applyFilters();
+    updatePillCounts();
+  } catch { toast('Failed to load accounts', 'error'); }
+}
+
+function doLogout() {
+  ['session_token','session_role','session_username'].forEach(k => localStorage.removeItem(k));
+  window.location.href = '/worker-login';
+}
+
+// ── Filters ──────────────────────────────────────────────────────────────────
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.pill[data-filter]').forEach(p =>
+    p.classList.toggle('active', p.dataset.filter === f));
+  applyFilters();
+}
+
+function handleSearch() {
+  searchQ = document.getElementById('search-input').value.trim().toLowerCase();
+  applyFilters();
+}
+
+function updatePillCounts() {
+  const count = f => accounts.filter(a => (a.status || 'Available') === f).length;
+  const pill  = f => document.querySelector(`.pill[data-filter="${f}"]`);
+  const allExSold = accounts.filter(a => (a.status || 'Available') !== 'Sold').length;
+  const allPill = pill('ALL'); if (allPill) allPill.textContent = `All (${allExSold})`;
+  ['Available','Verify','Pending','Sold'].forEach(f => {
+    const p = pill(f); if (p) p.textContent = `${f} (${count(f)})`;
+  });
+}
+
+function getFiltered() {
+  return accounts.filter(a => {
+    const st = a.status || 'Available';
+    if (activeFilter === 'ALL') {
+      if (st === 'Sold') return false; // Sold hidden from ALL
+    } else {
+      if (st !== activeFilter) return false;
+    }
+    if (searchQ) {
+      const g = (a.gmail || '').toLowerCase();
+      const n = (a.notes || '').toLowerCase();
+      const r = (a.recoveryEmail || '').toLowerCase();
+      if (!g.includes(searchQ) && !n.includes(searchQ) && !r.includes(searchQ) && !String(a.serial).includes(searchQ)) return false;
+    }
+    return true;
+  });
+}
+
+function applyFilters() { renderTable(); }
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody  = document.getElementById('tbl-body');
+  const nowSec = Math.floor(Date.now() / 1000);
+  const rows   = getFiltered();
+
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--text-muted);">${accounts.length === 0 ? 'No accounts loaded. Click <strong>⟳ Sync Sheet</strong> to import.' : 'No accounts for this filter.'}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(a => {
+    // Password
+    const rev = revealed.has(a.id);
+    const passDisplay = rev ? esc(a.password || '') : '••••••••••';
+    const eyeSvg = rev
+      ? `<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/>`
+      : `<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>`;
+    const passCell = `<div class="cell-row">
+      <span class="mono ${rev ? '' : 'pass-mask'}" id="pv-${a.id}">${passDisplay}</span>
+      <button class="copy-btn" onclick="toggleReveal('${a.id}')" title="${rev?'Hide':'Show'} password"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${eyeSvg}</svg></button>
+      <button class="copy-btn" onclick="cp('${ej(a.password)}',this,'Password')" title="Copy password"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+    </div>`;
+
+    // 2FA
+    let twoCell;
+    if (!a.twoFactorSecret || a.twoFactorSecret.trim() === '') {
+      twoCell = `<span class="totp-na">—</span>`;
+    } else {
+      const r  = window.TOTPGenerator.generate(a.twoFactorSecret, nowSec);
+      const rem = r.remaining;
+      const pct = (rem / 30) * 100;
+      const wc  = rem <= 5 ? 'danger' : rem <= 10 ? 'warning' : '';
+      twoCell = `<div class="totp-box" id="totp-box-${a.id}">
+        <div class="totp-row">
+          <span class="totp-digits" id="totp-code-${a.id}">${r.formatted || '------'}</span>
+          <span class="totp-pill ${wc}" id="totp-pill-${a.id}">${rem}s</span>
+          <button class="copy-btn" onclick="copyTotp('${a.id}',this)" title="Copy 2FA"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+        </div>
+        <div class="totp-bar-bg"><div class="totp-bar ${wc}" id="totp-bar-${a.id}" style="width:${pct}%"></div></div>
+      </div>`;
+    }
+
+    // Recovery
+    const recCell = a.recoveryEmail
+      ? `<div class="cell-row"><span class="mono" style="color:var(--text-secondary);font-size:0.8rem">${esc(a.recoveryEmail)}</span><button class="copy-btn" onclick="cp('${ej(a.recoveryEmail)}',this,'Recovery')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div>`
+      : `<span style="color:var(--text-muted)">—</span>`;
+
+    // Status
+    const st = a.status || 'Available';
+    const statusCell = `<select class="status-select" onchange="quickStatus('${a.id}',this.value)">
+      <option value="Available" ${st==='Available'?'selected':''}>Available</option>
+      <option value="Verify"    ${st==='Verify'   ?'selected':''}>Verify</option>
+      <option value="Sold"      ${st==='Sold'     ?'selected':''}>Sold</option>
+      <option value="Pending"   ${st==='Pending'  ?'selected':''}>Pending</option>
+    </select>`;
+
+    // Audit
+    const audit = a.lastModifiedBy
+      ? `<span class="audit-label">by ${esc(a.lastModifiedBy)}</span>`
+      : `<span style="color:var(--text-muted);font-size:0.72rem">—</span>`;
+
+    return `<tr>
+      <td style="font-weight:600;color:var(--text-muted)">${a.serial||'—'}</td>
+      <td><div class="cell-row"><span class="mono" style="font-weight:500">${esc(a.gmail)}</span><button class="copy-btn" onclick="cp('${ej(a.gmail)}',this,'Gmail')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div></td>
+      <td>${passCell}</td>
+      <td>${twoCell}</td>
+      <td>${recCell}</td>
+      <td>${statusCell}</td>
+      <td>${audit}</td>
+       <td style="text-align:right">${canEdit ? `
+         <button class="btn btn-sm" onclick="openEditModal('${a.id}')" style="border-color:var(--accent-amber);color:var(--accent-amber);">Edit</button>
+       ` : '<span class="badge warning">View Only (Edit permission required from Admin)</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── TOTP Ticker ───────────────────────────────────────────────────────────────
+function startTicker() {
+  if (tickerId) clearInterval(tickerId);
+  tickerId = setInterval(() => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const rem    = 30 - (nowSec % 30);
+    const pct    = (rem / 30) * 100;
+    const wc     = rem <= 5 ? 'danger' : rem <= 10 ? 'warning' : '';
+    document.getElementById('live-clock').textContent = new Date().toTimeString().split(' ')[0];
+    for (const a of accounts) {
+      if (!a.twoFactorSecret || a.twoFactorSecret.trim() === '') continue;
+      const r  = window.TOTPGenerator.generate(a.twoFactorSecret, nowSec);
+      const ce = document.getElementById(`totp-code-${a.id}`);
+      const pe = document.getElementById(`totp-pill-${a.id}`);
+      const be = document.getElementById(`totp-bar-${a.id}`);
+      if (ce && ce.textContent !== r.formatted) ce.textContent = r.formatted;
+      if (pe) { pe.textContent = `${rem}s`; pe.className = `totp-pill ${wc}`; }
+      if (be) { be.style.width = `${pct}%`; be.className = `totp-bar ${wc}`; }
+    }
+  }, 1000);
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function toggleReveal(id) {
+  if (revealed.has(id)) revealed.delete(id); else revealed.add(id);
+  renderTable();
+}
+
+function copyTotp(id, btn) {
+  const a = accounts.find(x => x.id === id);
+  if (!a || !a.twoFactorSecret) return;
+  const r = window.TOTPGenerator.generate(a.twoFactorSecret);
+  if (r && r.code) cp(r.code, btn, '2FA Code');
+}
+
+async function quickStatus(id, status) {
+  const a = accounts.find(x => x.id === id);
+  if (!a) return;
+  a.status = status;
+  updatePillCounts();
+  toast(`Status → ${status}`, 'success');
+  try {
+    await fetch('/api/accounts/quick-status', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ id, status })
+    });
+  } catch {}
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Add New Account';
+  ['edit-id','edit-serial','edit-gmail','edit-password','edit-2fa','edit-recovery','edit-notes'].forEach(i => {
+    const el = document.getElementById(i);
+    if (el) el.value = i === 'edit-serial' ? String(accounts.length + 1) : '';
+  });
+  document.getElementById('edit-status').value = 'Available';
+  openModal('modal-edit');
+}
+
+function openEditModal(id) {
+  const a = accounts.find(x => x.id === id);
+  if (!a) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = `Edit — ${a.gmail || a.id}`;
+  document.getElementById('edit-id').value        = a.id;
+  document.getElementById('edit-serial').value    = a.serial || '';
+  document.getElementById('edit-gmail').value     = a.gmail || '';
+  document.getElementById('edit-password').value  = a.password || '';
+  document.getElementById('edit-2fa').value       = a.twoFactorSecret || '';
+  document.getElementById('edit-recovery').value  = a.recoveryEmail || '';
+  document.getElementById('edit-status').value    = a.status || 'Available';
+  document.getElementById('edit-notes').value     = a.notes || '';
+  openModal('modal-edit');
+}
+
+async function saveEdit() {
+  const id      = document.getElementById('edit-id').value;
+  const gmail   = document.getElementById('edit-gmail').value.trim();
+  const newPass = document.getElementById('edit-password').value.trim();
+  if (!gmail) { toast('Gmail is required', 'error'); return; }
+
+  const payload = {
+    id:              id || `acc-${Date.now()}`,
+    serial:          parseInt(document.getElementById('edit-serial').value) || accounts.length + 1,
+    gmail,
+    password:        newPass,
+    twoFactorSecret: document.getElementById('edit-2fa').value.trim(),
+    recoveryEmail:   document.getElementById('edit-recovery').value.trim(),
+    status:          document.getElementById('edit-status').value,
+    notes:           document.getElementById('edit-notes').value.trim(),
+    changedBy:       workerName  // tracked by server for password audit
+  };
+
+  // Optimistic update
+  if (id) {
+    const idx = accounts.findIndex(a => a.id === id);
+    if (idx !== -1) {
+      const oldPass = accounts[idx].password;
+      accounts[idx] = { ...accounts[idx], ...payload };
+      if (newPass !== oldPass) { accounts[idx].lastModifiedBy = workerName; }
+    }
+  } else {
+    accounts.push({ ...payload, hidePasswordFromCustomer: true, hide2FaFromCustomer: false, hideFromCustomer: false, lastModifiedBy: '' });
+  }
+
+  closeModal('modal-edit');
+  applyFilters();
+  updatePillCounts();
+  toast(id ? 'Account updated' : 'Account created', 'success');
+
+  try {
+    const ep = id ? '/api/accounts/update' : '/api/accounts/create';
+    await fetch(ep, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  } catch { toast('Backend save warning', 'warning'); }
+}
+
+async function doSync() {
+  const btn = document.getElementById('btn-sync');
+  btn.disabled = true; btn.textContent = 'Syncing…';
+  try {
+    const res  = await fetch('/api/sync-sheet', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ sheetUrl: document.getElementById('sync-url').value, mode: document.getElementById('sync-mode').value })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Sync failed');
+    closeModal('modal-sync');
+    await load();
+    toast(`Synced ${data.importedCount} accounts`, 'success');
+  } catch (e) { toast(`Sync error: ${e.message}`, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Sync Now'; }
+}
+
+function openSyncModal() { openModal('modal-sync'); }
+function downloadCSV()   { window.location.href = '/api/export-csv'; toast('Exporting CSV…','info'); }
+function openModal(id)   { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id)  { document.getElementById(id)?.classList.remove('open'); }
+
+async function cp(text, btn, label) {
+  if (!text) { toast(`Empty ${label}`, 'error'); return; }
+  try { await navigator.clipboard.writeText(text); } catch {
+    const t = document.createElement('textarea'); t.value = text;
+    document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+  }
+  toast(`Copied ${label}!`, 'success');
+  if (btn) {
+    btn.classList.add('copied');
+    const orig = btn.innerHTML;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 1500);
+  }
+}
+
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+function ej(s)  { if (!s) return ''; return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function toast(msg, type='info') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${esc(msg)}</span>`;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+</script>
+</body>
+</html>
