@@ -764,7 +764,8 @@ async function performSheetSync() {
  * Export Accounts as CSV
  */
 function downloadCSV() {
-    window.location.href = 'export-csv';
+    // Trigger CSV export via backend action
+    window.location.href = `${API_BASE}?action=exportCsv`;
     showToast('Exporting accounts to CSV...', 'info');
 }
 
