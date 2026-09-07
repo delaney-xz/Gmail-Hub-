@@ -227,7 +227,7 @@
 // ── Auth guard ───────────────────────────────────────────────────────────────
 // Define Apps Script endpoint
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdPOjwlwcZLerYM1KStgofzqswB2l4Mqza37ayUU6OiPnRVfbuzNA-E5CKt2DUZaj7WQ/exec';
-
+const API_BASE = SCRIPT_URL;
 const sessionToken = localStorage.getItem('session_token');
 const sessionRole  = localStorage.getItem('session_role');
 let adminName      = localStorage.getItem('session_username') || 'admin';
