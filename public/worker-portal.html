@@ -163,7 +163,10 @@
 
 <script src="totp.js"></script>
 <script>
-// ── Auth guard ───────────────────────────────────────────────────────────────
+let tickerId = null;
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdPOjwlwcZLerYM1KStgofzqswB2l4Mqza37ayUU6OiPnRVfbuzNA-E5CKt2DUZaj7WQ/exec';
+const API_BASE = SCRIPT_URL;
+  // ── Auth guard ───────────────────────────────────────────────────────────────
 const sessionToken = localStorage.getItem('session_token');
 const sessionRole  = localStorage.getItem('session_role');
 const workerName   = localStorage.getItem('session_username') || 'worker';
