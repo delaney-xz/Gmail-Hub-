@@ -50,6 +50,12 @@ function doPost(e) {
       case 'toggleVisibility':
         result = toggleVisibility(params);
         break;
+      case 'customerRegister':
+        result = customerRegister(params);
+        break;
+      case 'syncVerifiedAccounts':
+        result = syncVerifiedAccounts(params);
+        break;
       case 'syncSheet':
         // Simple sync – returns latest data; real sync logic can be added later
         result = { success: true, message: 'Sheet synchronized' };
@@ -111,10 +117,15 @@ function workerLogin({ username, password }) {
   for (const row of data) {
     const [user, pass, role] = row;
     if (user && user.toString() === username && pass && pass.toString() === password && role && role.toString().toLowerCase() === 'worker') {
-      return { success: true, token: Utilities.getUuid(), username, role: 'worker' };
+      const canEdit = getWorkerPermission(username);
+      return { success: true, token: Utilities.getUuid(), username, role: 'worker', canEdit };
     }
   }
   return { success: false, error: 'Invalid worker credentials' };
+}
+
+
+
 }
 
 function customerLogin({ username, password }) {
