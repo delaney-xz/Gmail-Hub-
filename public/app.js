@@ -31,14 +31,22 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 async function loadAccounts() {
     try {
-        const res = await fetch(`${API_BASE}/accounts?role=${currentRole}`);
+        const res = await fetch(API_BASE, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'getAccounts' })
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        
-        if (Array.isArray(data)) {
-            accounts = data;
+        const payload = await res.json();
+        if (payload.success && Array.isArray(payload.accounts)) {
+            accounts = payload.accounts;
+        } else if (Array.isArray(payload)) {
+            accounts = payload;
+        } else {
+            console.warn('Unexpected getAccounts response', payload);
+            accounts = [];
         }
-
         applyFilters();
         updateFilterCounts();
         updateAdminStats();
@@ -741,42 +749,15 @@ async function deleteAccount(id) {
  * Google Sheet Live Sync
  */
 function openSyncModal() {
-    openModal('sync-modal');
+    // Refresh accounts from backend
+    loadAccounts();
+    showToast('Accounts refreshed from server', 'success');
 }
 
 async function performSheetSync() {
-    const btn = document.getElementById('btn-do-sync');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = `<span class="pulse-indicator"></span> <span>Syncing with Sheet...</span>`;
-    }
-
-    const sheetUrl = document.getElementById('sync-sheet-url').value.trim();
-    const gid = document.getElementById('sync-gid-select').value;
-    const mode = document.getElementById('sync-mode-select').value;
-
-    try {
-        const res = await fetch('sync-sheet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sheetUrl, gid, mode })
-        });
-        const result = await res.json();
-
-        if (!res.ok || !result.success) throw new Error(result.error || 'Sync failed');
-
-        closeModal('sync-modal');
-        await loadAccounts();
-        showToast(`Successfully synced ${result.importedCount} accounts from Google Sheet!`, 'success');
-    } catch (err) {
-        console.error(err);
-        showToast(`Sync failed: ${err.message}`, 'error');
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = `<span>Fetch & Sync Live</span>`;
-        }
-    }
+    // Legacy sync removed; simply reload accounts
+    await loadAccounts();
+    showToast('Accounts reloaded', 'success');
 }
 
 /**

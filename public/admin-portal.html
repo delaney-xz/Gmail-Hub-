@@ -255,12 +255,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function load() {
   try {
-    const res = await fetch('/api/accounts?role=admin');
-    const d   = await res.json();
-    if (Array.isArray(d)) accounts = d;
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'getAccounts' })
+    });
+    const payload = await res.json();
+    if (payload.success && Array.isArray(payload.accounts)) {
+      accounts = payload.accounts;
+    } else if (Array.isArray(payload)) {
+      accounts = payload;
+    } else {
+      console.warn('Unexpected getAccounts response', payload);
+      accounts = [];
+    }
     applyFilters();
     updateStats();
-  } catch { toast('Failed to load accounts', 'error'); }
+  } catch (err) {
+    console.error('Failed to load admin accounts:', err);
+    toast('Failed to load accounts', 'error');
+  }
 }
 
 function doLogout() {

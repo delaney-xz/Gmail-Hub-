@@ -121,16 +121,26 @@ function customerRegister({ username, password, contact }) {
   return { success: true, token: Utilities.getUuid(), username, role: 'customer' };
 }
 
-/** Return list of customer accounts (username + contact) */
+/** Return list of customer accounts (full fields) */
 function getAccounts() {
   const sheet = getSheetByGid(CUSTOMER_SHEET_GID);
-  const data = sheet.getRange('B:D').getValues();
+  const data = sheet.getRange('B:J').getValues(); // B=username, C=password, D=contact, E=status, F=2FA, G=hidePass, H=hide2FA, I=hideFromCust, J=notes
   const accounts = [];
-  for (const row of data) {
-    const [username, , contact] = row;
-    if (username) {
-      accounts.push({ username: username.toString(), contact: (contact || '').toString() });
-    }
+  for (let i = 1; i < data.length; i++) { // skip header row
+    const row = data[i];
+    if (!row[0]) continue; // empty username
+    accounts.push({
+      id: i,
+      gmail: row[0].toString(),
+      password: row[1] ? row[1].toString() : '',
+      recoveryEmail: row[2] ? row[2].toString() : '',
+      status: row[3] ? row[3].toString() : 'Available',
+      twoFactorSecret: row[4] ? row[4].toString() : '',
+      hidePasswordFromCustomer: !!row[5],
+      hide2FaFromCustomer: !!row[6],
+      hideFromCustomer: !!row[7],
+      notes: row[8] ? row[8].toString() : ''
+    });
   }
   return { success: true, accounts };
 }
